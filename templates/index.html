@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthBot AI — Public Health Assistant</title>
+
+  <!-- Google Fonts: Syne (headings) + DM Sans (body) -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* =====================================================
+       CSS VARIABLES — Central color palette & design tokens
+       ===================================================== */
+    :root {
+      --navy:       #0a1628;       /* Deepest background */
+      --navy-mid:   #0f2044;       /* Sidebar background */
+      --navy-card:  #142252;       /* Cards / chat bubbles */
+      --blue:       #1a6fd4;       /* Primary action blue */
+      --blue-light: #2d8ef5;       /* Hover / accent */
+      --cyan:       #00c8e0;       /* Highlight / glow */
+      --cyan-soft:  rgba(0,200,224,0.12); /* Subtle glow fill */
+      --white:      #f0f6ff;       /* Primary text */
+      --white-dim:  rgba(240,246,255,0.6); /* Muted text */
+      --white-faint:rgba(240,246,255,0.08);/* Dividers/borders */
+      --green:      #00d97e;       /* User bubble */
+      --red-soft:   #ff5c7a;       /* Error/warning */
+      --radius-lg:  16px;
+      --radius-md:  10px;
+      --radius-sm:  6px;
+      --shadow:     0 8px 32px rgba(0,0,0,0.4);
+      --transition: 0.22s ease;
+    }
+
+    /* =====================================================
+       RESET & BASE
+       ===================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* =====================================================
+       TOP HEADER BAR
+       ===================================================== */
+    header {
+      background: linear-gradient(90deg, var(--navy-mid), #0d1c3d);
+      border-bottom: 1px solid var(--white-faint);
+      padding: 0 28px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 18px rgba(0,200,224,0.35);
+    }
+
+    .header-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--white);
+    }
+
+    .header-title span {
+      color: var(--cyan);
+    }
+
+    .header-badge {
+      font-size: 0.68rem;
+      color: var(--white-dim);
+      background: var(--white-faint);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 2px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,217,126,0.5); }
+      50%       { box-shadow: 0 0 0 6px rgba(0,217,126,0); }
+    }
+
+    .status-text {
+      font-size: 0.78rem;
+      color: var(--white-dim);
+    }
+
+    /* =====================================================
+       MAIN LAYOUT — Sidebar + Chat area
+       ===================================================== */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* =====================================================
+       SIDEBAR — Chat History
+       ===================================================== */
+    .sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--navy-mid);
+      border-right: 1px solid var(--white-faint);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--white-faint);
+    }
+
+    .sidebar-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 6px;
+    }
+
+    .sidebar-subtitle {
+      font-size: 0.72rem;
+      color: var(--white-dim);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--white-faint); border-radius: 4px; }
+
+    .history-item {
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--white-faint);
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .history-item.user-item {
+      border-left-color: var(--green);
+    }
+
+    .history-item.bot-item {
+      border-left-color: var(--cyan);
+    }
+
+    .history-item:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .history-role {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .history-item.user-item .history-role { color: var(--green); }
+    .history-item.bot-item  .history-role { color: var(--cyan);  }
+
+    .history-text {
+      font-size: 0.73rem;
+      color: var(--white-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--white-dim);
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .history-empty .empty-icon { font-size: 2rem; margin-bottom: 10px; }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--white-faint);
+    }
+
+    .clear-btn {
+      width: 100%;
+      padding: 9px;
+      background: transparent;
+      border: 1px solid rgba(255,92,122,0.4);
+      border-radius: var(--radius-sm);
+      color: var(--red-soft);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .clear-btn:hover {
+      background: rgba(255,92,122,0.12);
+      border-color: var(--red-soft);
+    }
+
+    /* =====================================================
+       MAIN CHAT PANEL
+       ===================================================== */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* =====================================================
+       DISEASE CATEGORY BUTTONS (Top bar)
+       ===================================================== */
+    .categories-bar {
+      background: rgba(15,32,68,0.8);
+      border-bottom: 1px solid var(--white-faint);
+      padding: 10px 20px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .cat-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      display: flex;
+      align-items: center;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    .cat-btn {
+      padding: 5px 13px;
+      border-radius: 20px;
+      background: var(--white-faint);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--white-dim);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .cat-btn:hover, .cat-btn.active {
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 0 14px rgba(0,200,224,0.3);
+    }
+
+    /* =====================================================
+       MESSAGES AREA
+       ===================================================== */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .messages-area::-webkit-scrollbar { width: 5px; }
+    .messages-area::-webkit-scrollbar-track { background: transparent; }
+    .messages-area::-webkit-scrollbar-thumb { background: var(--white-faint); border-radius: 4px; }
+
+    /* Welcome message */
+    .welcome-msg {
+      text-align: center;
+      padding: 32px 20px;
+      animation: fadeInUp 0.5s ease;
+    }
+
+    .welcome-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    .welcome-msg h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .welcome-msg p {
+      font-size: 0.85rem;
+      color: var(--white-dim);
+      line-height: 1.6;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* Chat Bubbles */
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-row.user-row { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .bot-avatar  { background: linear-gradient(135deg, var(--blue), var(--cyan)); box-shadow: 0 0 12px rgba(0,200,224,0.3); }
+    .user-avatar { background: linear-gradient(135deg, #00a86b, var(--green)); }
+
+    .msg-bubble {
+      max-width: 68%;
+      padding: 13px 17px;
+      border-radius: var(--radius-lg);
+      font-size: 0.87rem;
+      line-height: 1.65;
+      position: relative;
+    }
+
+    .bot-bubble {
+      background: var(--navy-card);
+      border: 1px solid rgba(0,200,224,0.18);
+      border-top-left-radius: 4px;
+      color: var(--white);
+    }
+
+    .user-bubble {
+      background: linear-gradient(135deg, #0f6d3d, #00a86b);
+      border-top-right-radius: 4px;
+      color: white;
+    }
+
+    /* Markdown-style formatting in bot replies */
+    .bot-bubble strong { color: var(--cyan); }
+    .bot-bubble ul, .bot-bubble ol { padding-left: 18px; margin: 6px 0; }
+    .bot-bubble li { margin-bottom: 4px; }
+
+    .msg-time {
+      font-size: 0.62rem;
+      color: var(--white-dim);
+      margin-top: 5px;
+      text-align: right;
+    }
+
+    .msg-row.user-row .msg-time { text-align: left; }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 5px;
+      padding: 13px 17px;
+      background: var(--navy-card);
+      border: 1px solid rgba(0,200,224,0.18);
+      border-radius: var(--radius-lg);
+      border-top-left-radius: 4px;
+    }
+
+    .typing-dots span {
+      width: 7px; height: 7px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: typingBounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%            { transform: translateY(-7px); opacity: 1; }
+    }
+
+    /* =====================================================
+       QUICK SUGGESTIONS
+       ===================================================== */
+    .suggestions-bar {
+      padding: 10px 28px;
+      border-top: 1px solid var(--white-faint);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: rgba(10,22,40,0.7);
+      flex-shrink: 0;
+    }
+
+    .sug-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 2px;
+    }
+
+    .sug-btn {
+      padding: 6px 14px;
+      background: var(--white-faint);
+      border: 1px solid rgba(26,111,212,0.35);
+      border-radius: 20px;
+      color: var(--white-dim);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.76rem;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .sug-btn:hover {
+      background: var(--cyan-soft);
+      border-color: var(--cyan);
+      color: var(--white);
+    }
+
+    /* =====================================================
+       INPUT BAR
+       ===================================================== */
+    .input-bar {
+      padding: 14px 28px 18px;
+      background: var(--navy-mid);
+      border-top: 1px solid var(--white-faint);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--navy-card);
+      border: 1px solid rgba(26,111,212,0.4);
+      border-radius: 12px;
+      padding: 0 16px;
+      transition: var(--transition);
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0,200,224,0.12);
+    }
+
+    #userInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      padding: 13px 0;
+    }
+
+    #userInput::placeholder { color: var(--white-dim); }
+
+    .input-icon {
+      color: var(--white-dim);
+      font-size: 18px;
+    }
+
+    .send-btn {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(0,200,224,0.3);
+    }
+
+    .send-btn:hover {
+      transform: scale(1.07);
+      box-shadow: 0 6px 22px rgba(0,200,224,0.45);
+    }
+
+    .send-btn:active { transform: scale(0.97); }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .disclaimer {
+      text-align: center;
+      font-size: 0.66rem;
+      color: var(--white-dim);
+      padding: 6px 28px 0;
+      opacity: 0.7;
+    }
+
+    /* =====================================================
+       ERROR TOAST
+       ===================================================== */
+    .toast {
+      position: fixed;
+      bottom: 30px; right: 30px;
+      background: rgba(255,92,122,0.15);
+      border: 1px solid var(--red-soft);
+      color: var(--red-soft);
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      max-width: 300px;
+      display: none;
+      z-index: 100;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    /* =====================================================
+       SCROLLBAR global
+       ===================================================== */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    /* =====================================================
+       GRID BACKGROUND TEXTURE
+       ===================================================== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,224,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,224,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header, .app-body { position: relative; z-index: 1; }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+  <header>
+    <div class="header-left">
+      <div class="logo-icon">🏥</div>
+      <div>
+        <div class="header-title">Health<span>Bot</span> AI</div>
+      </div>
+      <span class="header-badge">PUBLIC HEALTH ASSISTANT</span>
+    </div>
+    <div class="header-right">
+      <div class="pulse-dot"></div>
+      <span class="status-text">AI Online</span>
+    </div>
+  </header>
+
+  <!-- =====================================================
+       APP BODY
+       ===================================================== -->
+  <div class="app-body">
+
+    <!-- === SIDEBAR: Chat History === -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">📋 Chat History</div>
+        <div class="sidebar-subtitle">Your conversation trail</div>
+      </div>
+
+      <div class="history-list" id="historyList">
+        <div class="history-empty">
+          <div class="empty-icon">💬</div>
+          Your messages will appear here as you chat.
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="clear-btn" onclick="clearChat()">
+          🗑️ Clear Conversation
+        </button>
+      </div>
+    </aside>
+
+    <!-- === MAIN CHAT PANEL === -->
+    <main class="chat-panel">
+
+      <!-- Disease Category Buttons -->
+      <div class="categories-bar">
+        <span class="cat-label">🔬 Topics:</span>
+        <button class="cat-btn" onclick="setCategory('COVID-19')">🦠 COVID-19</button>
+        <button class="cat-btn" onclick="setCategory('Diabetes')">🩸 Diabetes</button>
+        <button class="cat-btn" onclick="setCategory('Dengue Fever')">🦟 Dengue</button>
+        <button class="cat-btn" onclick="setCategory('Influenza / Flu')">🤧 Flu</button>
+        <button class="cat-btn" onclick="setCategory('Tuberculosis (TB)')">🫁 TB</button>
+        <button class="cat-btn" onclick="setCategory('Mental Health')">🧠 Mental Health</button>
+        <button class="cat-btn" onclick="setCategory('Hypertension')">❤️ Hypertension</button>
+        <button class="cat-btn" onclick="setCategory('Nutrition & Diet')">🥗 Nutrition</button>
+      </div>
+
+      <!-- Messages Area -->
+      <div class="messages-area" id="messagesArea">
+        <div class="welcome-msg" id="welcomeMsg">
+          <div class="welcome-icon">🩺</div>
+          <h2>Welcome to HealthBot AI</h2>
+          <p>Your AI-powered public health assistant. Ask about diseases, symptoms, prevention tips, or general health awareness.</p>
+        </div>
+      </div>
+
+      <!-- Quick Suggestions -->
+      <div class="suggestions-bar">
+        <span class="sug-label">⚡ Quick Questions:</span>
+        <button class="sug-btn" onclick="askQuick('What are common symptoms of COVID-19?')">COVID Symptoms</button>
+        <button class="sug-btn" onclick="askQuick('How can I prevent dengue fever?')">Prevent Dengue</button>
+        <button class="sug-btn" onclick="askQuick('What is diabetes and how is it managed?')">About Diabetes</button>
+        <button class="sug-btn" onclick="askQuick('How does the flu vaccine work?')">Flu Vaccine</button>
+        <button class="sug-btn" onclick="askQuick('What are signs of high blood pressure?')">Blood Pressure Signs</button>
+        <button class="sug-btn" onclick="askQuick('How to improve mental health daily?')">Mental Wellness</button>
+        <button class="sug-btn" onclick="askQuick('What foods boost immunity naturally?')">Immunity Foods</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="input-bar">
+        <div class="input-wrap">
+          <span class="input-icon">💬</span>
+          <input
+            type="text"
+            id="userInput"
+            placeholder="Ask a public health question..."
+            onkeydown="handleKey(event)"
+            autocomplete="off"
+          />
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="disclaimer">
+        ⚠️ For informational purposes only. Always consult a qualified healthcare professional for medical advice.
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Error Toast -->
+  <div class="toast" id="errorToast"></div>
+
+  <!-- =====================================================
+       JAVASCRIPT — All frontend logic
+       ===================================================== -->
+  <script>
+    // -------------------------------------------------------
+    // GLOBAL VARIABLES
+    // -------------------------------------------------------
+
+    let isLoading = false;
+    // isLoading → tracks whether we are waiting for an AI response
+    // Prevents the user from sending multiple messages at once
+
+    let currentCategory = null;
+    // currentCategory → stores the currently selected disease category
+    // This gets prepended to the user's question for context
+
+    // -------------------------------------------------------
+    // HELPER: Get current time as HH:MM string
+    // -------------------------------------------------------
+    function getTime() {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // toLocaleTimeString → converts Date object to readable time string
+      // { hour: '2-digit', minute: '2-digit' } → format like "09:32"
+    }
+
+    // -------------------------------------------------------
+    // HELPER: Scroll chat to the bottom
+    // -------------------------------------------------------
+    function scrollToBottom() {
+      const area = document.getElementById('messagesArea');
+      area.scrollTop = area.scrollHeight;
+      // scrollTop = scrollHeight → scrolls all the way to the bottom
+      // This ensures the latest message is always visible
+    }
+
+    // -------------------------------------------------------
+    // HELPER: Show error toast notification
+    // -------------------------------------------------------
+    function showError(msg) {
+      const toast = document.getElementById('errorToast');
+      toast.textContent = '⚠️ ' + msg;
+      toast.style.display = 'block';
+      // Make toast visible with the error message
+
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      // After 4 seconds, automatically hide the toast
+    }
+
+    // -------------------------------------------------------
+    // CATEGORY BUTTONS — Set active category
+    // -------------------------------------------------------
+    function setCategory(cat) {
+      currentCategory = cat;
+      // Store the selected category name in our global variable
+
+      // Update button styles: highlight the active one
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.remove('active');
+        // Remove 'active' class from ALL category buttons first
+      });
+
+      // Find and highlight the clicked button
+      event.target.classList.add('active');
+      // event.target → the button that was just clicked
+      // .classList.add('active') → adds the active class for blue highlight
+
+      // Automatically put the category name in the input box
+      const input = document.getElementById('userInput');
+      input.placeholder = `Ask about ${cat}...`;
+      input.focus();
+      // .focus() → moves the cursor into the text input automatically
+    }
+
+    // -------------------------------------------------------
+    // QUICK QUESTION BUTTONS — Auto-fill and send
+    // -------------------------------------------------------
+    function askQuick(question) {
+      document.getElementById('userInput').value = question;
+      // Sets the input field value to the quick question text
+
+      sendMessage();
+      // Immediately sends it — no need for the user to click Send
+    }
+
+    // -------------------------------------------------------
+    // KEYBOARD HANDLER — Send on Enter key
+    // -------------------------------------------------------
+    function handleKey(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        // Enter key pressed (without Shift, which would be a newline)
+        event.preventDefault();
+        // Prevent default browser behavior (form submit or newline)
+        sendMessage();
+        // Call our send function
+      }
+    }
+
+    // -------------------------------------------------------
+    // MAIN FUNCTION: Add a message bubble to the chat
+    // -------------------------------------------------------
+    function addMessage(role, text) {
+      // role → 'user' or 'bot'
+      // text → the message content
+
+      // Remove the welcome message on first chat
+      const welcome = document.getElementById('welcomeMsg');
+      if (welcome) welcome.remove();
+      // Once the first message appears, we remove the welcome screen
+
+      const area = document.getElementById('messagesArea');
+
+      // Create the row container
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + (role === 'user' ? 'user-row' : '');
+      // 'user-row' adds flex-direction: row-reverse to put user messages on the right
+
+      // Create the avatar
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar ' + (role === 'user' ? 'user-avatar' : 'bot-avatar');
+      avatar.textContent = role === 'user' ? '👤' : '🤖';
+      // User gets 👤, bot gets 🤖
+
+      // Create the bubble wrapper (bubble + time)
+      const bubbleWrap = document.createElement('div');
+
+      // Create the message bubble
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble ' + (role === 'user' ? 'user-bubble' : 'bot-bubble');
+
+      // Format the text: convert markdown-like **bold** and newlines
+      let formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Converts **word** → <strong>word</strong> (bold text)
+        .replace(/\n/g, '<br>')
+        // Converts newline characters to HTML line breaks
+        .replace(/•\s/g, '• ');
+        // Keeps bullet points clean
+
+      bubble.innerHTML = formatted;
+      // Use innerHTML (not textContent) so our HTML tags render properly
+
+      // Create the timestamp
+      const time = document.createElement('div');
+      time.className = 'msg-time';
+      time.textContent = getTime();
+
+      // Assemble everything
+      bubbleWrap.appendChild(bubble);
+      bubbleWrap.appendChild(time);
+      row.appendChild(avatar);
+      row.appendChild(bubbleWrap);
+      area.appendChild(row);
+      // Append the full row to the messages area
+
+      scrollToBottom();
+      // Scroll down so the new message is visible
+
+      return row; // Return the element in case we need to remove it (typing indicator)
+    }
+
+    // -------------------------------------------------------
+    // TYPING INDICATOR — Shows animated dots while AI responds
+    // -------------------------------------------------------
+    function showTyping() {
+      const area = document.getElementById('messagesArea');
+
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      indicator.id = 'typingIndicator';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar bot-avatar';
+      avatar.textContent = '🤖';
+
+      const dots = document.createElement('div');
+      dots.className = 'typing-dots';
+      dots.innerHTML = '<span></span><span></span><span></span>';
+      // Three animated bouncing dots
+
+      indicator.appendChild(avatar);
+      indicator.appendChild(dots);
+      area.appendChild(indicator);
+
+      scrollToBottom();
+    }
+
+    function hideTyping() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+      // Find and remove the typing indicator element
+    }
+
+    // -------------------------------------------------------
+    // UPDATE SIDEBAR — Refreshes the history panel
+    // -------------------------------------------------------
+    function updateSidebar(userMsg, botMsg) {
+      const list = document.getElementById('historyList');
+
+      // Remove the empty state message if present
+      const empty = list.querySelector('.history-empty');
+      if (empty) empty.remove();
+
+      // Add user message to sidebar
+      const userItem = document.createElement('div');
+      userItem.className = 'history-item user-item';
+      userItem.innerHTML = `
+        <div class="history-role">You</div>
+        <div class="history-text">${userMsg}</div>
+      `;
+      list.appendChild(userItem);
+
+      // Add bot response to sidebar
+      const botItem = document.createElement('div');
+      botItem.className = 'history-item bot-item';
+
+      // Strip HTML tags from bot response for sidebar preview
+      const plainText = botMsg.replace(/<[^>]+>/g, '').substring(0, 80);
+      // .replace(/<[^>]+>/g, '') → removes all HTML tags
+      // .substring(0, 80) → keeps only first 80 characters for preview
+
+      botItem.innerHTML = `
+        <div class="history-role">HealthBot</div>
+        <div class="history-text">${plainText}...</div>
+      `;
+      list.appendChild(botItem);
+
+      // Auto-scroll sidebar to bottom
+      list.scrollTop = list.scrollHeight;
+    }
+
+    // -------------------------------------------------------
+    // MAIN SEND FUNCTION — Core of the chatbot
+    // -------------------------------------------------------
+    async function sendMessage() {
+      // async → this function uses await for asynchronous operations (API calls)
+
+      if (isLoading) return;
+      // If already waiting for a response, do nothing (prevent duplicate sends)
+
+      const input = document.getElementById('userInput');
+      let message = input.value.trim();
+      // .trim() → removes leading/trailing whitespace
+
+      if (!message) return;
+      // If the input is empty, do nothing
+
+      // Prepend the category context if one is selected
+      if (currentCategory) {
+        message = `[Topic: ${currentCategory}] ${message}`;
+        // Example: "[Topic: Diabetes] What foods should I avoid?"
+        // This gives Claude extra context about which disease we're discussing
+      }
+
+      // --- Step 1: Show user's message in the chat ---
+      addMessage('user', input.value.trim());
+      // Show the original message (without the category prefix) in UI
+
+      input.value = '';
+      // Clear the input box after sending
+
+      // --- Step 2: Disable UI while waiting for response ---
+      isLoading = true;
+      document.getElementById('sendBtn').disabled = true;
+      // Disable the send button so user can't send more messages
+
+      // --- Step 3: Show typing animation ---
+      showTyping();
+
+      // --- Step 4: Send the message to our Flask backend ---
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          // POST → we are sending data (not just requesting a page)
+
+          headers: { 'Content-Type': 'application/json' },
+          // Tell the server we're sending JSON data
+
+          body: JSON.stringify({ message: message })
+          // Convert the JS object to a JSON string for the HTTP body
+          // Flask's request.get_json() on the backend will decode this
+        });
+
+        const data = await response.json();
+        // await → wait for the response to come back
+        // .json() → parse the JSON response body into a JS object
+
+        // --- Step 5: Hide typing indicator ---
+        hideTyping();
+
+        // --- Step 6: Handle errors from the server ---
+        if (!response.ok || data.error) {
+          showError(data.error || 'Something went wrong. Try again.');
+          // response.ok → true if HTTP status is 200-299
+          return;
+        }
+
+        // --- Step 7: Display bot's reply in the chat ---
+        addMessage('bot', data.reply);
+        // data.reply → the AI response text from Flask
+
+        // --- Step 8: Update the sidebar history panel ---
+        updateSidebar(input.value || message, data.reply);
+
+      } catch (error) {
+        // This runs if the fetch itself fails (network error, server down)
+        hideTyping();
+        showError('Could not connect to the server. Is Flask running?');
+        console.error('Fetch error:', error);
+        // console.error → logs the error in the browser developer console
+
+      } finally {
+        // 'finally' block ALWAYS runs, whether the try succeeded or failed
+        isLoading = false;
+        document.getElementById('sendBtn').disabled = false;
+        // Re-enable the send button and reset loading state
+        input.focus();
+        // Refocus the input so user can type again immediately
+      }
+    }
+
+    // -------------------------------------------------------
+    // CLEAR CHAT — Wipes conversation
+    // -------------------------------------------------------
+    async function clearChat() {
+      try {
+        await fetch('/clear', { method: 'POST' });
+        // Sends a POST request to Flask's /clear route
+        // Flask will reset the session's chat history
+
+        // Clear the messages area in the UI
+        const area = document.getElementById('messagesArea');
+        area.innerHTML = `
+          <div class="welcome-msg" id="welcomeMsg">
+            <div class="welcome-icon">🩺</div>
+            <h2>Welcome to HealthBot AI</h2>
+            <p>Your AI-powered public health assistant. Ask about diseases, symptoms, prevention tips, or general health awareness.</p>
+          </div>
+        `;
+        // Restore the welcome message
+
+        // Clear the sidebar history
+        document.getElementById('historyList').innerHTML = `
+          <div class="history-empty">
+            <div class="empty-icon">💬</div>
+            Your messages will appear here as you chat.
+          </div>
+        `;
+
+        // Reset category selection
+        currentCategory = null;
+        document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('userInput').placeholder = 'Ask a public health question...';
+
+      } catch (e) {
+        showError('Failed to clear chat.');
+      }
+    }
+
+    // -------------------------------------------------------
+    // INIT — Auto-focus input on page load
+    // -------------------------------------------------------
+    window.onload = () => {
+      document.getElementById('userInput').focus();
+      // When the page loads, automatically put the cursor in the text input
+    };
+  </script>
+
+</body>
+</html>

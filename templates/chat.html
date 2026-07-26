@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthBot AI — Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy:      #0a1628;
+      --navy-mid:  #0f2044;
+      --navy-card: #142252;
+      --blue:      #1a6fd4;
+      --cyan:      #00c8e0;
+      --cyan-soft: rgba(0,200,224,0.1);
+      --green:     #00d97e;
+      --red:       #ff5c7a;
+      --white:     #f0f6ff;
+      --dim:       rgba(240,246,255,0.55);
+      --faint:     rgba(240,246,255,0.07);
+      --radius:    12px;
+      --tr:        0.2s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy); color: var(--white);
+      display: flex; flex-direction: column;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,224,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,224,0.03) 1px, transparent 1px);
+      background-size: 44px 44px; pointer-events: none; z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative; z-index: 10;
+      height: 60px; flex-shrink: 0;
+      background: var(--navy-mid);
+      border-bottom: 1px solid var(--faint);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 0 14px rgba(0,200,224,0.3);
+    }
+    .header-title {
+      font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700;
+    }
+    .header-title span { color: var(--cyan); }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .user-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 12px;
+      background: var(--faint);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      font-size: 0.8rem; color: var(--dim);
+    }
+    .user-badge strong { color: var(--white); }
+    .status-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,217,126,0.5)} 50%{box-shadow:0 0 0 5px rgba(0,217,126,0)} }
+    .btn-logout {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid rgba(255,92,122,0.35);
+      border-radius: 7px;
+      color: var(--red); font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: var(--tr);
+    }
+    .btn-logout:hover { background: rgba(255,92,122,0.1); border-color: var(--red); }
+
+    /* ── APP BODY ── */
+    .app-body {
+      display: flex; flex: 1; overflow: hidden;
+      position: relative; z-index: 1;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 280px; flex-shrink: 0;
+      background: var(--navy-mid);
+      border-right: 1px solid var(--faint);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--faint);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sidebar-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--cyan);
+    }
+    .btn-new-chat {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none; border-radius: 7px;
+      color: white; font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem; font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,200,224,0.25);
+      transition: var(--tr);
+    }
+    .btn-new-chat:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,200,224,0.4); }
+
+    .conv-list {
+      flex: 1; overflow-y: auto;
+      padding: 10px 8px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .conv-list::-webkit-scrollbar { width: 4px; }
+    .conv-list::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 4px; }
+
+    .conv-item {
+      display: flex; align-items: center;
+      padding: 10px 12px; border-radius: 9px;
+      cursor: pointer; gap: 10px;
+      border: 1px solid transparent;
+      transition: var(--tr);
+      position: relative;
+    }
+    .conv-item:hover { background: var(--faint); border-color: rgba(255,255,255,0.06); }
+    .conv-item.active {
+      background: var(--cyan-soft);
+      border-color: rgba(0,200,224,0.25);
+    }
+    .conv-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: var(--faint);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-title {
+      font-size: 0.8rem; font-weight: 500;
+      color: var(--white);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .conv-meta {
+      font-size: 0.68rem; color: var(--dim);
+      margin-top: 2px;
+    }
+    .conv-delete {
+      width: 24px; height: 24px; flex-shrink: 0;
+      background: transparent; border: none;
+      color: var(--dim); font-size: 14px;
+      cursor: pointer; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: var(--tr);
+    }
+    .conv-item:hover .conv-delete { opacity: 1; }
+    .conv-delete:hover { background: rgba(255,92,122,0.15); color: var(--red); }
+
+    .conv-empty {
+      text-align: center; padding: 40px 16px;
+      color: var(--dim); font-size: 0.78rem; line-height: 1.7;
+    }
+    .conv-empty .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+
+    /* ── MAIN CHAT ── */
+    .chat-main {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Disease category bar */
+    .cat-bar {
+      flex-shrink: 0;
+      background: rgba(15,32,68,0.8);
+      border-bottom: 1px solid var(--faint);
+      padding: 9px 18px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .cat-label {
+      font-size: 0.67rem; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--dim);
+      white-space: nowrap;
+    }
+    .cat-btn {
+      padding: 4px 12px; border-radius: 20px;
+      background: var(--faint);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: var(--dim); font-family: 'DM Sans', sans-serif;
+      font-size: 0.74rem; font-weight: 500;
+      cursor: pointer; transition: var(--tr); white-space: nowrap;
+    }
+    .cat-btn:hover, .cat-btn.active {
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-color: transparent; color: white;
+      box-shadow: 0 0 12px rgba(0,200,224,0.25);
+    }
+
+    /* Messages */
+    .messages-area {
+      flex: 1; overflow-y: auto;
+      padding: 24px 28px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .messages-area::-webkit-scrollbar { width: 4px; }
+    .messages-area::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 4px; }
+
+    .welcome {
+      text-align: center; padding: 40px 20px;
+      animation: fadeUp 0.4s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .welcome-icon { font-size: 3rem; margin-bottom: 14px; }
+    .welcome h2 {
+      font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .welcome p { font-size: 0.85rem; color: var(--dim); line-height: 1.7; max-width: 360px; margin: 0 auto; }
+
+    /* Bubbles */
+    .msg-row {
+      display: flex; gap: 12px;
+      animation: fadeUp 0.28s ease;
+    }
+    .msg-row.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0; margin-top: 2px;
+    }
+    .bot-avatar  { background: linear-gradient(135deg, var(--blue), var(--cyan)); box-shadow: 0 0 10px rgba(0,200,224,0.25); }
+    .user-avatar { background: linear-gradient(135deg, #00a86b, var(--green)); }
+    .bubble-wrap { max-width: 65%; }
+    .bubble {
+      padding: 12px 16px; border-radius: 14px;
+      font-size: 0.87rem; line-height: 1.65;
+    }
+    .bot-bubble {
+      background: var(--navy-card);
+      border: 1px solid rgba(0,200,224,0.15);
+      border-top-left-radius: 4px; color: var(--white);
+    }
+    .user-bubble {
+      background: linear-gradient(135deg, #0f6d3d, #00a86b);
+      border-top-right-radius: 4px; color: white;
+    }
+    .bot-bubble strong { color: var(--cyan); }
+    .bot-bubble ul, .bot-bubble ol { padding-left: 18px; margin: 6px 0; }
+    .bot-bubble li { margin-bottom: 4px; }
+    .msg-time { font-size: 0.62rem; color: var(--dim); margin-top: 5px; text-align: right; }
+    .msg-row.user .msg-time { text-align: left; }
+
+    /* Typing */
+    .typing-row { display: flex; gap: 12px; animation: fadeUp 0.28s ease; }
+    .typing-dots {
+      display: flex; gap: 5px; align-items: center;
+      padding: 12px 16px;
+      background: var(--navy-card);
+      border: 1px solid rgba(0,200,224,0.15);
+      border-radius: 14px; border-top-left-radius: 4px;
+    }
+    .typing-dots span {
+      width: 7px; height: 7px;
+      background: var(--cyan); border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-7px);opacity:1} }
+
+    /* Quick suggestions */
+    .sug-bar {
+      flex-shrink: 0;
+      padding: 8px 18px;
+      border-top: 1px solid var(--faint);
+      display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+      background: rgba(10,22,40,0.7);
+    }
+    .sug-label {
+      font-size: 0.67rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--dim); width: 100%;
+    }
+    .sug-btn {
+      padding: 5px 13px; border-radius: 20px;
+      background: var(--faint);
+      border: 1px solid rgba(26,111,212,0.3);
+      color: var(--dim); font-family: 'DM Sans', sans-serif;
+      font-size: 0.74rem; cursor: pointer; transition: var(--tr); white-space: nowrap;
+    }
+    .sug-btn:hover { background: var(--cyan-soft); border-color: var(--cyan); color: var(--white); }
+
+    /* Input */
+    .input-bar {
+      flex-shrink: 0;
+      padding: 12px 20px 14px;
+      background: var(--navy-mid);
+      border-top: 1px solid var(--faint);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .input-wrap {
+      flex: 1; display: flex; align-items: center;
+      background: var(--navy-card);
+      border: 1px solid rgba(26,111,212,0.35);
+      border-radius: 11px; padding: 0 14px;
+      transition: var(--tr);
+    }
+    .input-wrap:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0,200,224,0.1);
+    }
+    #userInput {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--white); font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem; padding: 12px 0;
+    }
+    #userInput::placeholder { color: var(--dim); }
+    .send-btn {
+      width: 44px; height: 44px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none; border-radius: 11px;
+      color: white; font-size: 17px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: var(--tr);
+      box-shadow: 0 3px 14px rgba(0,200,224,0.28);
+    }
+    .send-btn:hover { transform: scale(1.07); box-shadow: 0 5px 20px rgba(0,200,224,0.42); }
+    .send-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .disclaimer { text-align: center; font-size: 0.64rem; color: var(--dim); padding: 4px 0 6px; opacity: 0.7; }
+
+    /* Loading overlay for conversation load */
+    .loading-conv {
+      display: none;
+      position: absolute; inset: 0; z-index: 5;
+      background: rgba(10,22,40,0.7);
+      align-items: center; justify-content: center;
+      font-size: 0.9rem; color: var(--cyan);
+    }
+    .loading-conv.show { display: flex; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 26px; right: 26px;
+      background: rgba(255,92,122,0.12);
+      border: 1px solid var(--red); color: var(--red);
+      padding: 11px 16px; border-radius: 9px;
+      font-size: 0.82rem; display: none; z-index: 100;
+      animation: fadeUp 0.3s ease;
+    }
+
+    /* Scrollbar global */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="logo-icon">🏥</div>
+      <div class="header-title">Health<span>Bot</span> AI</div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge">
+        <div class="status-dot"></div>
+        Logged in as <strong>{{ username }}</strong>
+      </div>
+      <a href="/logout" class="btn-logout">🚪 Logout</a>
+    </div>
+  </header>
+
+  <div class="app-body">
+
+    <!-- SIDEBAR: Persistent Chat History -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">💬 Conversations</div>
+        <button class="btn-new-chat" onclick="startNewChat()">✚ New Chat</button>
+      </div>
+
+      <div class="conv-list" id="convList">
+        {% if conversations %}
+          {% for conv in conversations %}
+          <div class="conv-item" id="conv-{{ conv['id'] }}" onclick="loadConversation({{ conv['id'] }})">
+            <div class="conv-icon">💬</div>
+            <div class="conv-info">
+              <div class="conv-title">{{ conv['title'] }}</div>
+              <div class="conv-meta">{{ conv['message_count'] }} messages · {{ conv['updated_at'][:10] }}</div>
+            </div>
+            <button class="conv-delete" onclick="deleteConversation(event, {{ conv['id'] }})">🗑</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="conv-empty" id="emptyState">
+            <div class="empty-icon">🗂️</div>
+            No conversations yet.<br/>Start chatting to save history!
+          </div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT AREA -->
+    <main class="chat-main" style="position:relative;">
+      <div class="loading-conv" id="loadingConv">⏳ Loading conversation...</div>
+
+      <!-- Disease Category Buttons -->
+      <div class="cat-bar">
+        <span class="cat-label">🔬 Topics:</span>
+        <button class="cat-btn" onclick="setCategory(this,'COVID-19')">🦠 COVID-19</button>
+        <button class="cat-btn" onclick="setCategory(this,'Diabetes')">🩸 Diabetes</button>
+        <button class="cat-btn" onclick="setCategory(this,'Dengue Fever')">🦟 Dengue</button>
+        <button class="cat-btn" onclick="setCategory(this,'Influenza')">🤧 Flu</button>
+        <button class="cat-btn" onclick="setCategory(this,'Tuberculosis')">🫁 TB</button>
+        <button class="cat-btn" onclick="setCategory(this,'Mental Health')">🧠 Mental Health</button>
+        <button class="cat-btn" onclick="setCategory(this,'Hypertension')">❤️ Hypertension</button>
+        <button class="cat-btn" onclick="setCategory(this,'Nutrition')">🥗 Nutrition</button>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages-area" id="messagesArea">
+        <div class="welcome" id="welcomeMsg">
+          <div class="welcome-icon">🩺</div>
+          <h2>Hello, {{ username }}!</h2>
+          <p>Ask any public health question. Your conversations are saved and you can revisit them anytime from the sidebar.</p>
+        </div>
+      </div>
+
+      <!-- Quick Suggestions -->
+      <div class="sug-bar">
+        <span class="sug-label">⚡ Quick Questions:</span>
+        <button class="sug-btn" onclick="askQuick('What are common symptoms of COVID-19?')">COVID Symptoms</button>
+        <button class="sug-btn" onclick="askQuick('How can I prevent dengue fever?')">Prevent Dengue</button>
+        <button class="sug-btn" onclick="askQuick('What is diabetes and how is it managed?')">About Diabetes</button>
+        <button class="sug-btn" onclick="askQuick('How does the flu vaccine work?')">Flu Vaccine</button>
+        <button class="sug-btn" onclick="askQuick('What are signs of high blood pressure?')">Blood Pressure</button>
+        <button class="sug-btn" onclick="askQuick('How to improve mental health daily?')">Mental Wellness</button>
+        <button class="sug-btn" onclick="askQuick('What foods boost immunity naturally?')">Immunity Foods</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="input-bar">
+        <div class="input-wrap">
+          <input type="text" id="userInput"
+            placeholder="Ask a public health question..."
+            onkeydown="handleKey(event)" autocomplete="off"/>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="disclaimer">⚠️ For educational purposes only. Always consult a qualified healthcare professional.</div>
+    </main>
+  </div>
+
+  <div class="toast" id="errorToast"></div>
+
+  <script>
+    // ── State ────────────────────────────────────────────────
+    let isLoading       = false;
+    let currentConvId   = null;   // active conversation ID
+    let currentCategory = null;   // selected disease category
+
+    // ── Helpers ──────────────────────────────────────────────
+    const getTime = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    function scrollBottom() {
+      const a = document.getElementById('messagesArea');
+      a.scrollTop = a.scrollHeight;
+    }
+
+    function showError(msg) {
+      const t = document.getElementById('errorToast');
+      t.textContent = '⚠️ ' + msg;
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 4500);
+    }
+
+    function formatText(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+
+    // ── Category Buttons ─────────────────────────────────────
+    function setCategory(btn, cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('userInput').placeholder = `Ask about ${cat}...`;
+      document.getElementById('userInput').focus();
+    }
+
+    // ── Quick Questions ──────────────────────────────────────
+    function askQuick(q) {
+      document.getElementById('userInput').value = q;
+      sendMessage();
+    }
+
+    // ── Enter key ────────────────────────────────────────────
+    function handleKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    }
+
+    // ── Add message bubble ───────────────────────────────────
+    function addMessage(role, text, time = null) {
+      const welcome = document.getElementById('welcomeMsg');
+      if (welcome) welcome.remove();
+
+      const area = document.getElementById('messagesArea');
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + (role === 'user' ? 'user' : '');
+
+      const av = document.createElement('div');
+      av.className = 'avatar ' + (role === 'user' ? 'user-avatar' : 'bot-avatar');
+      av.textContent = role === 'user' ? '👤' : '🤖';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble-wrap';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble ' + (role === 'user' ? 'user-bubble' : 'bot-bubble');
+      bubble.innerHTML = formatText(text);
+
+      const t = document.createElement('div');
+      t.className = 'msg-time';
+      t.textContent = time || getTime();
+
+      wrap.appendChild(bubble);
+      wrap.appendChild(t);
+      row.appendChild(av);
+      row.appendChild(wrap);
+      area.appendChild(row);
+      scrollBottom();
+    }
+
+    // ── Typing indicator ─────────────────────────────────────
+    function showTyping() {
+      const area = document.getElementById('messagesArea');
+      const row = document.createElement('div');
+      row.className = 'typing-row'; row.id = 'typingRow';
+      const av = document.createElement('div');
+      av.className = 'avatar bot-avatar'; av.textContent = '🤖';
+      const dots = document.createElement('div');
+      dots.className = 'typing-dots';
+      dots.innerHTML = '<span></span><span></span><span></span>';
+      row.appendChild(av); row.appendChild(dots);
+      area.appendChild(row);
+      scrollBottom();
+    }
+    function hideTyping() {
+      const r = document.getElementById('typingRow');
+      if (r) r.remove();
+    }
+
+    // ── Update sidebar after new conversation is created ─────
+    function addConvToSidebar(id, title) {
+      const list = document.getElementById('convList');
+      const empty = document.getElementById('emptyState');
+      if (empty) empty.remove();
+
+      // Deactivate current
+      document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+
+      const item = document.createElement('div');
+      item.className = 'conv-item active';
+      item.id = 'conv-' + id;
+      item.onclick = () => loadConversation(id);
+      item.innerHTML = `
+        <div class="conv-icon">💬</div>
+        <div class="conv-info">
+          <div class="conv-title">${title}</div>
+          <div class="conv-meta">1 message · just now</div>
+        </div>
+        <button class="conv-delete" onclick="deleteConversation(event, ${id})">🗑</button>
+      `;
+      // Insert at the top (newest first)
+      list.insertBefore(item, list.firstChild);
+    }
+
+    function updateConvMeta(id, count) {
+      const item = document.getElementById('conv-' + id);
+      if (item) {
+        const meta = item.querySelector('.conv-meta');
+        if (meta) meta.textContent = count + ' messages · just now';
+      }
+    }
+
+    // ── SEND MESSAGE ─────────────────────────────────────────
+    async function sendMessage() {
+      if (isLoading) return;
+      const input = document.getElementById('userInput');
+      let msg = input.value.trim();
+      if (!msg) return;
+
+      // Prepend category context if selected
+      const displayMsg = msg;
+      if (currentCategory) msg = `[Topic: ${currentCategory}] ${msg}`;
+
+      addMessage('user', displayMsg);
+      input.value = '';
+      isLoading = true;
+      document.getElementById('sendBtn').disabled = true;
+      showTyping();
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, conversation_id: currentConvId })
+        });
+        const data = await res.json();
+        hideTyping();
+
+        if (!res.ok || data.error) { showError(data.error || 'Something went wrong.'); return; }
+
+        addMessage('assistant', data.reply);
+
+        // Handle conversation tracking
+        if (!currentConvId) {
+          // Brand new conversation — add to sidebar
+          currentConvId = data.conversation_id;
+          const title = displayMsg.substring(0, 45) + (displayMsg.length > 45 ? '...' : '');
+          addConvToSidebar(currentConvId, title);
+        } else {
+          updateConvMeta(currentConvId, '—');
+        }
+
+        // Highlight active conversation
+        document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+        const activeItem = document.getElementById('conv-' + currentConvId);
+        if (activeItem) activeItem.classList.add('active');
+
+      } catch (err) {
+        hideTyping();
+        showError('Cannot connect to server. Is Flask running?');
+      } finally {
+        isLoading = false;
+        document.getElementById('sendBtn').disabled = false;
+        input.focus();
+      }
+    }
+
+    // ── LOAD PAST CONVERSATION ───────────────────────────────
+    async function loadConversation(id) {
+      if (currentConvId === id) return; // already loaded
+
+      document.getElementById('loadingConv').classList.add('show');
+
+      try {
+        const res  = await fetch('/api/conversations/' + id);
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Could not load conversation.'); return; }
+
+        // Clear messages area and show loaded messages
+        const area = document.getElementById('messagesArea');
+        area.innerHTML = '';
+        currentConvId = id;
+
+        data.messages.forEach(m => {
+          addMessage(m.role, m.content, m.created_at.substring(11, 16));
+        });
+
+        // Highlight sidebar item
+        document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+        const item = document.getElementById('conv-' + id);
+        if (item) item.classList.add('active');
+
+      } catch (e) {
+        showError('Failed to load conversation.');
+      } finally {
+        document.getElementById('loadingConv').classList.remove('show');
+      }
+    }
+
+    // ── NEW CHAT ─────────────────────────────────────────────
+    async function startNewChat() {
+      await fetch('/api/conversations/new', { method: 'POST' });
+      currentConvId = null;
+
+      // Reset messages area
+      document.getElementById('messagesArea').innerHTML = `
+        <div class="welcome" id="welcomeMsg">
+          <div class="welcome-icon">🩺</div>
+          <h2>New Conversation</h2>
+          <p>Ask any public health question. Your conversation will be saved automatically.</p>
+        </div>
+      `;
+
+      // Deactivate sidebar items
+      document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+      document.getElementById('userInput').focus();
+    }
+
+    // ── DELETE CONVERSATION ──────────────────────────────────
+    async function deleteConversation(e, id) {
+      e.stopPropagation(); // Prevent triggering loadConversation
+      if (!confirm('Delete this conversation? This cannot be undone.')) return;
+
+      try {
+        const res = await fetch('/api/conversations/' + id, { method: 'DELETE' });
+        if (!res.ok) { showError('Could not delete.'); return; }
+
+        // Remove from sidebar
+        const item = document.getElementById('conv-' + id);
+        if (item) item.remove();
+
+        // If we deleted the active conversation, reset to blank
+        if (currentConvId === id) {
+          currentConvId = null;
+          document.getElementById('messagesArea').innerHTML = `
+            <div class="welcome" id="welcomeMsg">
+              <div class="welcome-icon">🩺</div>
+              <h2>Conversation Deleted</h2>
+              <p>Start a new conversation below.</p>
+            </div>
+          `;
+        }
+
+        // Show empty state if no conversations left
+        const remaining = document.querySelectorAll('.conv-item');
+        if (remaining.length === 0) {
+          document.getElementById('convList').innerHTML = `
+            <div class="conv-empty" id="emptyState">
+              <div class="empty-icon">🗂️</div>
+              No conversations yet.<br/>Start chatting to save history!
+            </div>
+          `;
+        }
+      } catch (e) {
+        showError('Failed to delete conversation.');
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    window.onload = () => document.getElementById('userInput').focus();
+  </script>
+</body>
+</html>

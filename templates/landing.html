@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthBot AI — Public Health Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy:      #0a1628;
+      --navy-mid:  #0f2044;
+      --navy-card: #142252;
+      --blue:      #1a6fd4;
+      --blue-lt:   #2d8ef5;
+      --cyan:      #00c8e0;
+      --cyan-soft: rgba(0,200,224,0.12);
+      --green:     #00d97e;
+      --white:     #f0f6ff;
+      --dim:       rgba(240,246,255,0.6);
+      --faint:     rgba(240,246,255,0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    /* grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,224,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,224,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+    /* glow blobs */
+    .blob {
+      position: fixed; border-radius: 50%;
+      filter: blur(90px); pointer-events: none; opacity: 0.18;
+    }
+    .blob1 { width: 500px; height: 500px; background: #1a6fd4; top: -120px; left: -100px; }
+    .blob2 { width: 400px; height: 400px; background: #00c8e0; bottom: -80px; right: -80px; }
+
+    /* ── nav ── */
+    nav {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 60px;
+      border-bottom: 1px solid var(--faint);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 18px rgba(0,200,224,0.35);
+    }
+    .nav-logo span { color: var(--cyan); }
+    .nav-links { display: flex; gap: 12px; }
+    .btn-outline {
+      padding: 9px 22px;
+      border: 1px solid rgba(0,200,224,0.4);
+      border-radius: 8px;
+      color: var(--cyan);
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover { background: var(--cyan-soft); border-color: var(--cyan); }
+    .btn-solid {
+      padding: 9px 22px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none; border-radius: 8px;
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(0,200,224,0.3);
+    }
+    .btn-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,200,224,0.45); }
+
+    /* ── hero ── */
+    .hero {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center;
+      padding: 100px 20px 80px;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      background: var(--cyan-soft);
+      border: 1px solid rgba(0,200,224,0.3);
+      border-radius: 20px;
+      font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.5px; color: var(--cyan);
+      margin-bottom: 32px;
+    }
+    .pulse { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,217,126,0.5)} 50%{box-shadow:0 0 0 5px rgba(0,217,126,0)} }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 800; line-height: 1.15;
+      margin-bottom: 24px;
+    }
+    h1 .cyan { color: var(--cyan); }
+    .hero-sub {
+      font-size: 1.1rem; color: var(--dim);
+      max-width: 560px; line-height: 1.7;
+      margin-bottom: 44px;
+    }
+    .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-hero {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none; border-radius: 10px;
+      color: white; font-family: 'DM Sans', sans-serif;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 0 6px 24px rgba(0,200,224,0.35);
+      transition: all 0.2s;
+    }
+    .btn-hero:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(0,200,224,0.5); }
+    .btn-hero-ghost {
+      padding: 14px 32px;
+      background: transparent;
+      border: 1px solid rgba(240,246,255,0.2);
+      border-radius: 10px;
+      color: var(--white); font-family: 'DM Sans', sans-serif;
+      font-size: 1rem; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-hero-ghost:hover { background: var(--faint); border-color: rgba(240,246,255,0.35); }
+
+    /* ── features ── */
+    .features {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px; max-width: 1000px; margin: 0 auto 100px;
+      padding: 0 40px;
+    }
+    .feat-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(0,200,224,0.12);
+      border-radius: 14px;
+      padding: 28px 24px;
+      transition: all 0.25s;
+    }
+    .feat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0,200,224,0.3);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+    .feat-icon { font-size: 2rem; margin-bottom: 14px; }
+    .feat-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      margin-bottom: 8px; color: var(--white);
+    }
+    .feat-desc { font-size: 0.83rem; color: var(--dim); line-height: 1.6; }
+
+    /* ── footer ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 30px;
+      border-top: 1px solid var(--faint);
+      color: var(--dim); font-size: 0.78rem;
+    }
+
+    /* flash messages */
+    .flashes {
+      position: fixed; top: 20px; right: 20px;
+      z-index: 999; display: flex; flex-direction: column; gap: 8px;
+    }
+    .flash {
+      padding: 12px 18px; border-radius: 8px;
+      font-size: 0.84rem; font-weight: 500;
+      animation: slideIn 0.3s ease;
+      max-width: 300px;
+    }
+    .flash.success { background: rgba(0,217,126,0.15); border: 1px solid #00d97e; color: #00d97e; }
+    .flash.error   { background: rgba(255,92,122,0.15); border: 1px solid #ff5c7a; color: #ff5c7a; }
+    .flash.info    { background: rgba(0,200,224,0.15); border: 1px solid var(--cyan); color: var(--cyan); }
+    .flash.warning { background: rgba(255,165,0,0.15); border: 1px solid orange; color: orange; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  </style>
+</head>
+<body>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <nav>
+    <div class="nav-logo">
+      <div class="logo-icon">🏥</div>
+      Health<span>Bot</span> AI
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="btn-outline">Log In</a>
+      <a href="/register" class="btn-solid">Sign Up Free</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">
+      <div class="pulse"></div>
+      Powered by LLaMA 3.3 70B · Free to Use
+    </div>
+    <h1>Your Personal<br/><span class="cyan">AI Health</span> Assistant</h1>
+    <p class="hero-sub">
+      Ask anything about diseases, symptoms, and prevention.
+      Get accurate, empathetic answers — and keep your full history saved forever.
+    </p>
+    <div class="hero-btns">
+      <a href="/register" class="btn-hero">🚀 Create Free Account</a>
+      <a href="/login" class="btn-hero-ghost">Already have an account →</a>
+    </div>
+  </section>
+
+  <div class="features">
+    <div class="feat-card">
+      <div class="feat-icon">🔐</div>
+      <div class="feat-title">Personal Account</div>
+      <div class="feat-desc">Your own secure account. All your conversations saved privately, forever.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📜</div>
+      <div class="feat-title">Full Chat History</div>
+      <div class="feat-desc">Every conversation stored in a database. Revisit any past discussion anytime.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🧠</div>
+      <div class="feat-title">Smart AI Responses</div>
+      <div class="feat-desc">LLaMA 3.3 70B on Groq — one of the most capable free AI models available.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏥</div>
+      <div class="feat-title">Health Focused</div>
+      <div class="feat-desc">Tuned for disease awareness, prevention, symptoms, and public health education.</div>
+    </div>
+  </div>
+
+  <footer>HealthBot AI · NLP Project · Built with Flask + Groq · For educational purposes only</footer>
+
+  <script>
+    // Auto-hide flash messages after 4 seconds
+    setTimeout(() => {
+      document.querySelectorAll('.flash').forEach(f => f.style.display = 'none');
+    }, 4000);
+  </script>
+</body>
+</html>
